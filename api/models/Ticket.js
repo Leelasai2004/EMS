@@ -1,19 +1,49 @@
 const mongoose = require("mongoose");
 
-const ticketSchema = new mongoose.Schema({
-   userid: { type: String, require: true },
-   eventid: { type: String, require: true },
-   ticketDetails: {
-      name: { type: String, required: true },
-      email: { type: String, require: true },
-      eventname: { type: String, require: true },
-      eventdate: { type: Date, require: true },
-      eventtime: { type: String, require: true },
-      ticketprice: { type: Number, require: true },
-      qr: { type: String, require: true },
-   },
-   count: { type: Number, default: 0 },
-});
+const ticketSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    eventId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Event",
+      required: true,
+    },
+    quantity: {
+      type: Number,
+      required: true,
+    },
+    totalAmount: {
+      type: Number,
+      required: true,
+    },
+    eventDetails: {
+      title: { type: String, required: true },
+      date: { type: Date, required: true },
+      time: { type: String, required: true },
+      venue: { type: String, required: true },
+      location: { type: String, required: true },
+      description: { type: String, required: true },
+      price: { type: Number, required: true },
+    },
+    ticketDetails: {
+      price: { type: Number, required: true },
+      purchaseDate: { type: Date, default: Date.now },
+    },
+    qrCode: {
+      type: String,
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ["active", "cancelled", "used"],
+      default: "active",
+    },
+  },
+  { timestamps: true }
+);
 
-const TicketModel = mongoose.model(`Ticket`, ticketSchema);
-module.exports = TicketModel;
+module.exports = mongoose.model("Ticket", ticketSchema);

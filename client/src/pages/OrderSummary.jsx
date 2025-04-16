@@ -1,144 +1,218 @@
-import axios from 'axios';
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from "react";
+import { Link, useParams, useNavigate } from "react-router-dom";
+import { UserContext } from "../UserContext";
+import axios from "axios";
 import { IoMdArrowBack } from "react-icons/io";
-import { Link, useParams } from 'react-router-dom';
 
 export default function OrderSummary() {
-    const {id} = useParams();
-    const [event, setEvent] = useState(null);
-    const [isCheckboxChecked, setIsCheckboxChecked] = useState(false)
-  
-    useEffect(()=>{
-      if(!id){
-        return;
-      }
-      axios.get(`/event/${id}/ordersummary`).then(response => {
-        setEvent(response.data)
-      }).catch((error) => {
-        console.error("Error fetching events:", error);
-      });
-    }, [id])
-    
-    //! Handle checkbox change
-    const handleCheckboxChange = (e) => {
-      setIsCheckboxChecked(e.target.checked)
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useContext(UserContext);
+  const [event, setEvent] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [checked, setChecked] = useState(false);
+  const [ticketCount, setTicketCount] = useState(1);
+
+  useEffect(() => {
+    if (!id) return;
+    fetchEventDetails();
+  }, [id]);
+
+  const fetchEventDetails = async () => {
+    try {
+      const response = await axios.get(`/events/${id}`);
+      setEvent(response.data);
+    } catch (error) {
+      console.error("Error fetching event details:", error);
+      setError("Failed to load event details");
+    } finally {
+      setLoading(false);
     }
-  
-    if (!event) return '';
+  };
+
+  const handleCheckboxChange = (e) => {
+    setChecked(e.target.checked);
+  };
+
+  const handleTicketCountChange = (e) => {
+    const count = parseInt(e.target.value);
+    if (count > 0 && count <= 10) {
+      setTicketCount(count);
+    }
+  };
+
+  const handleProceedToPayment = () => {
+    if (!checked) return;
+
+    // Store order details in localStorage for the payment page
+    const orderDetails = {
+      eventId: event._id,
+      quantity: ticketCount,
+      totalAmount: event.price * ticketCount,
+      eventDetails: {
+        title: event.title,
+        date: event.eventDate,
+        time: event.eventTime,
+        venue: event.venue?.name || "TBD",
+        price: event.price,
+      },
+    };
+
+    localStorage.setItem("orderDetails", JSON.stringify(orderDetails));
+    navigate(`/event/${id}/ordersummary/paymentsummary`);
+  };
+
+  if (loading) {
     return (
-      <div>
-          <Link to={'/event/'+event._id}>
-          <button 
-              // onClick={handleBackClick}
-              className='
-              inline-flex 
-              mt-12
-              gap-2
-              p-3 
-              ml-12
-              bg-gray-100
-              justify-center 
-              items-center 
-              text-blue-700
-              font-bold
-              rounded-md'
-              >
-          <IoMdArrowBack 
-            className='
-            font-bold
-            w-6
-            h-6
-            gap-2'/> 
-            Back
-          </button>
-          </Link>
-          <div className='flex flex-col'>
-                <div className= 'inline-flex gap-5 mt-8'> 
-                    <div className="
-                      p-4
-                      ml-12 
-                      bg-gray-100
-                      w-3/4
-                      mb-12"
-                      >
-                      <h2
-                          className='
-                            text-left
-                            font-bold
-                            '> 
-                            Terms & Conditions </h2>
-                            <br/>
-  
-                              <div>
-                              <ul className="custom-list">
-                                  <li> Refunds will be provided for ticket cancellations made up to 14 days before the event date. After this period, no refunds will be issued. To request a refund, please contact our customer support team. </li>
-  
-                                  <li> Tickets will be delivered to your registered email address as e-tickets. You can print the e-ticket or show it on your mobile device for entry to the event. </li>
-  
-                                  <li> Each individual is allowed to purchase a maximum of 2 tickets for this event to ensure fair distribution. </li>
-  
-                                  <li> In the rare event of cancellation or postponement, attendees will be notified via email. Refunds will be automatically processed for canceled events. </li>
-  
-                                  <li> Tickets for postponed events will not be refunded and the ticket will be considered a valid ticket on the date of postponement.</li>
-  
-                                  <li> Your privacy is important to us. Our privacy policy outlines how we collect, use, and protect your personal information. By using our app, you agree to our privacy policy. </li>
-  
-                                  <li> Before proceeding with your ticket purchase, please review and accept our terms and conditions, which govern the use of our app and ticketing services. </li>
-                              </ul>
-  
-                              <br/>
-                            </div>
-                                    
-                    </div>
-                    
-                    <div className="
-                      w-1/4
-                      pl-4
-                      h-1/4
-                      mr-12 
-                      bg-blue-100
-                    "
-                      >
-                        <h2 className='
-                            mt-4
-                            font-bold
-                        '>Booking Summary
-                        </h2>
-                        <div className='text-sm flex justify-between' >
-                              <div className='text-left mt-5'>{event.title}</div>
-                              <div className='text-right mt-5 mb-6 pr-5'>LKR. {event.ticketPrice}</div>
-                        </div>
-                        
-                        <hr className=" my-2 pt-2 border-gray-300" />
-                        <div className='text-sm font-bold flex justify-between' >
-                          <div className='text-left mt-5'>SUB TOTAL</div>
-                          <div className='text-right mt-5 mb-6 pr-5'>LKR. {event.ticketPrice}</div>
-                        </div>
-                        <div className='flex justify-between'>
-                          <input className='h-5 ' type='checkbox' onChange={handleCheckboxChange}/>
-                          <div className='px-2 text-sm'>
-                            I have verified the Event name, date and time before proceeding to payment. I accept terms and conditions. 
-                          </div>
-                        </div>
-  
-                        <div className='mb-5'>
-                                  <Link to={'/event/'+event._id+ '/ordersummary'+'/paymentsummary'}>
-                                    <button 
-                                    className={`mt-5 p-3 ml-2 w-36 text-gray-100 items-center ${
-                                      isCheckboxChecked ? 'bg-blue-700' : 'bg-gray-300'} gap-2 rounded-md`}
-                                    disabled={!isCheckboxChecked}
-                                    >
-                                      Proceed
-                                    </button>
-                                  </Link>
-                            </div>
-                          
-                            </div>
-                          </div>
-                          
-                          </div> 
-              
-                    </div>
-  
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
     );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-500">{error}</p>
+        <Link
+          to="/"
+          className="text-blue-600 hover:text-blue-800 mt-4 inline-block"
+        >
+          Return to Home
+        </Link>
+      </div>
+    );
+  }
+
+  if (!event) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-600">Event not found</p>
+        <Link
+          to="/"
+          className="text-blue-600 hover:text-blue-800 mt-4 inline-block"
+        >
+          Return to Home
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-white shadow rounded-lg overflow-hidden">
+          <div className="px-4 py-5 sm:p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              Order Summary
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Event Details */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Event Details
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium text-gray-900">{event.title}</h4>
+                    <p className="text-gray-600">{event.description}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Date</span>
+                      <span className="font-medium">
+                        {new Date(event.eventDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Time</span>
+                      <span className="font-medium">{event.eventTime}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Venue</span>
+                      <span className="font-medium">
+                        {event.venue?.name || "TBD"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Order Summary */}
+              <div className="bg-gray-50 p-6 rounded-lg">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Order Summary
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Number of Tickets</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={ticketCount}
+                      onChange={handleTicketCountChange}
+                      className="w-20 px-2 py-1 border rounded"
+                    />
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Ticket Price</span>
+                    <span className="font-medium">₹{event.price}</span>
+                  </div>
+                  <div className="border-t pt-4">
+                    <div className="flex justify-between font-bold">
+                      <span>Total</span>
+                      <span>₹{(event.price * ticketCount).toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <div className="flex items-start">
+                    <div className="flex items-center h-5">
+                      <input
+                        id="terms"
+                        type="checkbox"
+                        checked={checked}
+                        onChange={handleCheckboxChange}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                    </div>
+                    <div className="ml-3 text-sm">
+                      <label
+                        htmlFor="terms"
+                        className="font-medium text-gray-700"
+                      >
+                        I agree to the terms and conditions
+                      </label>
+                      <p className="text-gray-500">
+                        By proceeding, you agree to our terms of service and
+                        privacy policy.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <button
+                    onClick={handleProceedToPayment}
+                    disabled={!checked}
+                    className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+                      checked
+                        ? "bg-blue-600 hover:bg-blue-700"
+                        : "bg-gray-400 cursor-not-allowed"
+                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                  >
+                    Proceed to Payment
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
